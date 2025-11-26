@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Salas Disponíveis</title>
+  <link rel="icon" href="../images/logo - Copia.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="body">
+    <img src="../images/cabeçalho.png" alt="Foto de Perfil" width="1536px" height="45px">
+  <header>
+    <div class="user-info">
+      <img src="../images/perfilSemFoto.png" alt="Foto de Perfil" id="profilePic" class="profile-pic">
+      <div class="user-details">
+        <p id="username"></p>
+        <p id="userEmail"></p>
+      </div>
+    </div>
+    <nav>
+      <a href="tela-inicial_admin.html" style="text-decoration: none;">Início</a>
+      <a href="salas_admin.html" style="text-decoration: none;">Salas Disponíveis <span id="salasDisponiveisCount"></span></a>
+      <a href="salas-reservadas_admin.html" style="text-decoration: none;">Salas Reservadas</a>
+      <a href="gerenciamento_admin.html" style="text-decoration: none;">Gerenciamento</a>
+      <a href="../index.html" style="text-decoration: none;">Sair</a>
+    </nav>
+  </header>
+
+  <div class="titulo">
+    <h1>Salas Disponíveis</h1>
+  </div>
+
+  <main>
+    <div class="salas" id="listaSalas"></div>
+  </main>
+
+
+
+  <!-- Modal de confirmação de saída -->
+  <div id="modalSair" class="modal-sair">
+    <div class="modal-conteudo">
+      <p>Deseja realmente sair?</p>
+      <div class="botoes-modal">
+        <button id="confirmarSair">Sim</button>
+        <button id="cancelarSair">Não</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de reserva -->
+  <div id="modalReserva" class="modal-reserva">
+    <div class="modal-detalhes-reserva">
+      <h2>Reservar Sala</h2>
+      <form id="formReserva">
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" name="nome"><br><br>
+        <label for="horario-inicio">Horário Inicial:</label>
+        <input type="time" id="horario-inicio" name="horario-inicio" style="width: 358px; height: 1cm;"><br><br>
+        <label for="horario-fim">Horário Final:</label>
+        <input type="time" id="horario-fim" name="horario-fim" style="width: 358px; height: 1cm;"><br><br>
+        <label for="materiais">Materiais:</label>
+        <input type="text" id="materiais" name="materiais"><br><br>
+        <div class="botoes-modal">
+          <button id="confirmarReserva">Reservar</button>
+          <button id="cancelarReserva" type="button">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const currentUser = JSON.parse(localStorage.getItem('usuario'));
+
+      if (currentUser) {
+        document.getElementById('username').innerText = currentUser.username;
+        document.getElementById('userEmail').innerText = currentUser.email;
+        if (currentUser.profilePic) {
+          document.getElementById('profilePic').src = currentUser.profilePic;
+        }
+
+        const linkGerenciamento = document.querySelector('a[href="gerenciamento_admin.html"]');
+        if (linkGerenciamento) {
+          linkGerenciamento.style.display = currentUser.role === 'gerente' ? 'inline-block' : 'none';
+        }
+      }
+
+      const listaSalas = document.getElementById("listaSalas");
+      let salas = [];
+
+      async function carregarSalas() {
+        try {
+          const response = await fetch('/2ids/v100_EspacoConnect/api/admin/salas_listar.php');
+          const data = await response.json();
+          if (data.status === 'success') {
+            salas = data.salas;
+            localStorage.setItem("salas", JSON.stringify(salas));
+            renderizarSalas();
+          } else {
+            console.error('Erro ao carregar salas:', data.mensagem);
+          }
+        } catch (error) {
+          console.error('Erro na requisição:', error);
+        }
+      }
+
+      function renderizarSalas() {
+        listaSalas.innerHTML = '';
+        salas.forEach((sala) => {
+          const salaDiv = document.createElement("div");
+          salaDiv.className = "sala";
+          salaDiv.innerHTML = `
+            ${sala.nome} <br>
+            <a href="#">Reservar Sala</a>
+          `;
+          listaSalas.appendChild(salaDiv);
+
+          const reserva = reservas.find(r => r.salaId === sala.nome);
+          if (reserva) {
+            salaDiv.style.display = 'none';
+          } else if (sala.reservavel === false) {
+            salaDiv.querySelector('a').textContent = 'Reserva Proibida';
+            salaDiv.querySelector('a').style.pointerEvents = 'none';
+            salaDiv.querySelector('a').style.cursor = 'not-allowed';
+            salaDiv.style.opacity = '0.5';
+          }
+
+          salaDiv.querySelector('a').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (salaDiv.querySelector('a').textContent === 'Sala Reservada' || salaDiv.querySelector('a').textContent === 'Reserva Proibida') return;
+            mostrarModalReserva(sala.nome, salaDiv);
+          });
+        });
+      }
+
+      const reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+
+      const salasDisponiveisCount = document.getElementById('salasDisponiveisCount');
+      const atualizarSalasDisponiveisCount = () => {
+        const salasReservadas = reservas.map(reserva => reserva.salaId);
+        const salasDisponiveis = salas.filter(sala => !salasReservadas.includes(sala.nome) && sala.reservavel);
+        salasDisponiveisCount.innerHTML = `<span style="background-color: white; border-radius: 50%; padding: 0; font-size: 14px; display: inline-block; text-align: center; width: 25px; height: 25px; box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); line-height: 25px;"><span style="color: #004aad; font-weight: bold;">${salasDisponiveis.length}</span></span>`;
+      };
+
+      // Carregar salas ao iniciar
+      carregarSalas();
+
+      function mostrarModalReserva(salaId, sala) {
+        const modal = document.getElementById('modalReserva');
+        modal.style.display = 'block';
+        const form = document.getElementById('formReserva');
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const nome = document.getElementById('nome').value;
+          const horarioInicio = document.getElementById('horario-inicio').value;
+          const horarioFim = document.getElementById('horario-fim').value;
+          const materiais = document.getElementById('materiais').value;
+          if (!nome || !horarioInicio || !horarioFim || !materiais) {
+            alert('Preencha todos os campos.');
+            return;
+          }
+          reservarSala(salaId, sala, nome, `${horarioInicio} - ${horarioFim}`, materiais);
+          modal.style.display = 'none';
+          form.reset();
+        };
+        document.getElementById('cancelarReserva').addEventListener('click', () => {
+          modal.style.display = 'none';
+          form.reset();
+        });
+        window.addEventListener('click', function (event) {
+          if (event.target === modal) {
+            modal.style.display = 'none';
+            form.reset();
+          }
+        });
+      }
+
+      function reservarSala(salaId, sala, nome, horario, materiais) {
+        const reserva = {
+          salaId, nome, horario, materiais
+        };
+        reservas.push(reserva);
+        localStorage.setItem('reservas', JSON.stringify(reservas));
+        sala.style.display = 'none';
+        atualizarSalasDisponiveisCount();
+      }
+
+      const sairLink = document.querySelector('a[href="index.html"]');
+      const modalSair = document.getElementById('modalSair');
+      sairLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        modalSair.style.display = 'block';
+      });
+      document.getElementById('confirmarSair').addEventListener('click', function () {
+        window.location.href = 'index.html';
+      });
+      document.getElementById('cancelarSair').addEventListener('click', function () {
+        modalSair.style.display = 'none';
+      });
+      window.addEventListener('click', function (event) {
+        if (event.target === modalSair) {
+          modalSair.style.display = 'none';
+        }
+      });
+
+      document.getElementById('profilePic').addEventListener('click', () => {
+        if (!currentUser) return alert('Faça login para mudar a foto.');
+        const uploadInput = document.createElement('input');
+        uploadInput.type = 'file';
+        uploadInput.accept = 'image/*';
+        uploadInput.click();
+        uploadInput.addEventListener('change', () => {
+          const file = uploadInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            document.getElementById('profilePic').src = reader.result;
+            currentUser.profilePic = reader.result;
+            localStorage.setItem('usuario', JSON.stringify(currentUser));
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      // ---- DESTACAR SALA PESQUISADA ----
+      const urlParams = new URLSearchParams(window.location.search);
+      const salaId = urlParams.get("salaId");
+
+      if (salaId) {
+        const listaSalas = document.querySelectorAll(".sala-item"); // ajuste a classe conforme seu HTML
+        listaSalas.forEach(sala => {
+          const nomeSala = sala.querySelector(".sala-nome").innerText.trim(); // ajuste seletor
+          if (nomeSala === salaId) {
+            sala.classList.add("sala-destaque");
+            sala.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        });
+      }
+
+
+    });
+  </script>
+</body>
+
+</html>

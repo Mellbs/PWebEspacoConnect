@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Detalhes da Sala</title>
+    <link rel="icon" href="images/logo - Copia.png" type="image/png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="body">
+    <img src="images/cabeçalho.png" alt="Cabeçalho" width="1536px" height="45px">
+    <header>
+        <div class="user-info">
+            <img src="images/perfilSemFoto.png" alt="Foto de Perfil" id="profilePic" class="profile-pic">
+            <div class="user-details">
+                <p id="username"></p>
+                <p id="userEmail"></p>
+            </div>
+        </div>
+        <nav>
+            <a href="tela-inicial.html" style="text-decoration: none;">Início</a>
+            <a href="salas.html" style="text-decoration: none;">Salas Disponíveis</a>
+            <a href="salas-reservadas.html" style="text-decoration: none;">Salas Reservadas</a>
+            <a href="index.html" style="text-decoration: none;">Sair</a>
+        </nav>
+    </header>
+
+    <div class="titulo">
+        <h1 id="salaNome">Detalhes da Sala</h1>
+    </div>
+
+    <main>
+        <div class="formulario-editar-sala">
+            <h2>Editar Sala: <span id="salaNome"></span></h2>
+            <form id="formEditarSala">
+                <label for="capacidade">Capacidade:</label>
+                <input type="number" id="capacidade" name="capacidade" required>
+
+                <label for="equipamentos">Equipamentos:</label>
+                <textarea id="equipamentos" name="equipamentos" rows="3"></textarea>
+
+                <label for="descricao">Descrição:</label>
+                <textarea id="descricao" name="descricao" rows="3"></textarea>
+
+                <button type="submit">Salvar Alterações</button>
+                <button type="button" id="cancelarEditar">Cancelar</button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Modal de confirmação de saída -->
+    <div id="modalSair" class="modal-sair">
+        <div class="modal-conteudo">
+            <p>Deseja realmente sair?</p>
+            <div class="botoes-modal">
+                <button id="confirmarSair">Sim</button>
+                <button id="cancelarSair">Não</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (!currentUser) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            document.getElementById('username').textContent = currentUser.username;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            if (currentUser.profilePic) {
+                document.getElementById('profilePic').src = currentUser.profilePic;
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const salaNome = urlParams.get('sala');
+            const salas = JSON.parse(localStorage.getItem('salas')) || [];
+            const sala = salas.find(s => s.nome === salaNome);
+
+            if (sala) {
+                document.getElementById('salaNome').textContent = sala.nome;
+                const detalhesDiv = document.getElementById('salaDetalhes');
+                detalhesDiv.innerHTML = `
+                    <p><strong>Capacidade:</strong> ${sala.capacidade || 'N/A'}</p>
+                    <p><strong>Equipamentos:</strong> ${sala.equipamentos || 'N/A'}</p>
+                    <p><strong>Descrição:</strong> ${sala.descricao || 'N/A'}</p>
+                `;
+            } else {
+                document.getElementById('salaDetalhes').innerHTML = '<p>Sala não encontrada.</p>';
+            }
+
+            // Modal de sair
+            const sairLink = document.querySelector('a[href="index.html"]');
+            sairLink.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.getElementById('modalSair').style.display = 'block';
+            });
+            document.getElementById('confirmarSair').addEventListener('click', function () {
+                localStorage.removeItem('currentUser');
+                window.location.href = 'index.html';
+            });
+            document.getElementById('cancelarSair').addEventListener('click', function () {
+                document.getElementById('modalSair').style.display = 'none';
+            });
+            window.addEventListener('click', function (event) {
+                if (event.target === document.getElementById('modalSair')) {
+                    document.getElementById('modalSair').style.display = 'none';
+                }
+            });
+
+            // Perfil pic change
+            document.getElementById('profilePic').addEventListener('click', () => {
+                const uploadInput = document.createElement('input');
+                uploadInput.type = 'file';
+                uploadInput.accept = 'image/*';
+                uploadInput.click();
+                uploadInput.addEventListener('change', () => {
+                    const file = uploadInput.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        document.getElementById('profilePic').src = reader.result;
+                        currentUser.profilePic = reader.result;
+                        localStorage.setItem('usuario', JSON.stringify(currentUser));
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

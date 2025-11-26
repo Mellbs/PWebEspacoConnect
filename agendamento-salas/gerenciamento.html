@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerenciamento de Salas</title>
+  <link rel="icon" href="images/logo - Copia.png" type="image/png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="body">
+  <img src="images/cabeçalho.png" alt="Cabeçalho" width="1536px" height="45px">
+  <header>
+    <div class="user-info">
+      <img src="images/perfilSemFoto.png" alt="Foto de Perfil" id="profilePic" class="profile-pic">
+      <div class="user-details">
+        <p id="username"></p>
+        <p id="userEmail"></p>
+      </div>
+    </div>
+    <nav>
+      <a href="tela-inicial.html" style="text-decoration: none;">Início</a>
+      <a href="salas.html" style="text-decoration: none;">Salas Disponíveis <span id="salasDisponiveisCount"></span></a>
+      <a href="salas-reservadas.html" style="text-decoration: none;">Salas Reservadas</a>
+      <a href="gerenciamento.html" style="text-decoration: none;">Gerenciamento</a>
+      <a href="index.html" style="text-decoration: none;">Sair</a>
+    </nav>
+  </header>
+  <div id="modalSair" class="modal-sair">
+    <div class="modal-conteudo">
+      <p>Deseja realmente sair?</p>
+      <div class="botoes-modal">
+        <button id="confirmarSair">Sim</button>
+        <button id="cancelarSair">Não</button>
+      </div>
+    </div>
+  </div>
+  <div id="modalCriarSala" class="modal-criar-sala">
+    <div class="modal-conteudo" style="margin-top: 30px;"">
+      <h2>Criar Sala</h2>
+      <form id="formCriarSala">
+        <label for="nomeSala">Nome da Sala:</label>
+        <input type="text" id="nomeSala" name="nomeSala"><br><br>
+        <div class="botoes-modal">
+          <button id="confirmarCriarSala">Criar</button>
+          <button id="cancelarCriarSala" type="button">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div id="modalEditarSala" class="modal-criar-sala">
+    <div class="modal-conteudo" style="margin-top: 30px;">
+      <h2>Editar Sala: <span id="editarSalaNome"></span></h2>
+      <form id="formEditarSala">
+        <label for="editarCapacidade">Capacidade:</label>
+        <input type="number" id="editarCapacidade" name="capacidade" required><br><br>
+        <label for="editarEquipamentos">Equipamentos:</label>
+        <textarea id="editarEquipamentos" name="equipamentos" rows="3"></textarea><br><br>
+        <label for="editarDescricao">Descrição:</label>
+        <textarea id="editarDescricao" name="descricao" rows="3"></textarea><br><br>
+        <div class="botoes-modal">
+          <button id="confirmarEditarSala">Salvar Alterações</button>
+          <button id="cancelarEditarSala" type="button">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="titulo" style="display: flex; align-items: center; justify-content: space-between;">
+    <h1>Gerenciamento de Salas</h1>
+    <div style="display: flex; gap: 15px;">
+      <button id="btnCriarSala" style="width: 180px; height: 35px; margin-top: 148px; background-color: #004aad; color: #fff; padding: 10px; border: none; 
+        border-radius: 5px; cursor: pointer; font-size: 17px; font-weight: bold; ">
+        Criar Sala
+      </button>
+      <button id="btnGerenciarUsuario"
+        style="width: 180px; height: 35px; background-color: #004aad; color: #fff; padding: 10px; border: none; 
+        border-radius: 5px; cursor: pointer; font-size: 17px; font-weight: bold; margin-right: 85px; margin-top: -1px;">
+        Gerenciar Usuários
+      </button>
+    </div>
+  </div>
+  <main>
+    <div class="salas" id="listaSalas"></div>
+  </main>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const usuario = JSON.parse(localStorage.getItem('usuario'));
+      if (usuario) {
+        document.getElementById("username").textContent = usuario.username;
+        document.getElementById("userEmail").textContent = usuario.email;
+        if (usuario.profilePic) {
+          document.getElementById("profilePic").src = usuario.profilePic;
+        }
+        if (!usuario.email.includes('@gerente.com')) {
+          alert('Acesso negado. Apenas gerentes podem acessar esta página.');
+          window.location.href = 'tela-inicial.html';
+        }
+      } else {
+        alert('Faça login para acessar esta página.');
+        window.location.href = 'index.html';
+      }
+      document.getElementById('profilePic').addEventListener('click', () => {
+        if (!usuario) return alert('Faça login para mudar a foto.');
+        const uploadInput = document.createElement('input');
+        uploadInput.type = 'file';
+        uploadInput.accept = 'image/*';
+        uploadInput.click();
+        uploadInput.addEventListener('change', () => {
+          const file = uploadInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            document.getElementById('profilePic').src = reader.result;
+            usuario.profilePic = reader.result;
+            localStorage.setItem('usuario', JSON.stringify(usuario));
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+      const listaSalas = document.getElementById("listaSalas");
+      const salas = JSON.parse(localStorage.getItem("salas")) || [
+        { nome: "Sala A" },
+        { nome: "Sala B" },
+        { nome: "Sala C" },
+      ];
+      localStorage.setItem("salas", JSON.stringify(salas));
+      salas.forEach((sala, index) => {
+        const salaDiv = document.createElement("div");
+        salaDiv.className = "sala";
+        salaDiv.innerHTML = `
+          ${sala.nome} <br>
+          <button class="editarSalaBtn" data-index="${index}" style="background-color: white; color: black; padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; cursor: pointer;">Editar</button>
+        `;
+        listaSalas.appendChild(salaDiv);
+      });
+      // Modal Criar Sala
+      document.getElementById("btnCriarSala").addEventListener("click", () => {
+        document.getElementById("modalCriarSala").style.display = "block";
+      });
+      document.getElementById("cancelarCriarSala").addEventListener("click", () => {
+        document.getElementById("modalCriarSala").style.display = "none";
+        document.getElementById("formCriarSala").reset();
+      });
+      document.getElementById("formCriarSala").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const nomeSala = document.getElementById("nomeSala").value;
+        if (nomeSala) {
+          const novaSala = { nome: nomeSala };
+          salas.push(novaSala);
+          localStorage.setItem("salas", JSON.stringify(salas));
+          const salaDiv = document.createElement("div");
+          salaDiv.className = "sala";
+          salaDiv.innerHTML = `
+            ${novaSala.nome} <br>
+            <button class="editarSalaBtn" data-index="${salas.length - 1}" style="background-color: white; color: black; padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; cursor: pointer;">Editar</button>
+          `;
+          listaSalas.appendChild(salaDiv);
+          document.getElementById("modalCriarSala").style.display = "none";
+          document.getElementById("formCriarSala").reset();
+        }
+      });
+      // Botão Gerenciar Usuários
+      document.getElementById("btnGerenciarUsuario").addEventListener("click", () => {
+        window.location.href = "admin/gerenciar-usuarios.php";
+      });
+      // Modal de Sair
+      const sairLink = document.querySelector('a[href="index.html"]');
+      const modalSair = document.getElementById('modalSair');
+      sairLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        modalSair.style.display = 'block';
+      });
+      document.getElementById('confirmarSair').addEventListener('click', function () {
+        window.location.href = 'index.html';
+      });
+      document.getElementById('cancelarSair').addEventListener('click', function () {
+        modalSair.style.display = 'none';
+      });
+      window.addEventListener('click', function (event) {
+        if (event.target === modalSair) {
+          modalSair.style.display = 'none';
+        }
+      });
+
+      // Modal Editar Sala
+      document.addEventListener('click', function (event) {
+        if (event.target.classList.contains('editarSalaBtn')) {
+          const index = event.target.getAttribute('data-index');
+          const sala = salas[index];
+          document.getElementById('editarSalaNome').textContent = sala.nome;
+          document.getElementById('editarCapacidade').value = sala.capacidade || '';
+          document.getElementById('editarEquipamentos').value = sala.equipamentos || '';
+          document.getElementById('editarDescricao').value = sala.descricao || '';
+          document.getElementById('modalEditarSala').style.display = 'block';
+          document.getElementById('confirmarEditarSala').setAttribute('data-index', index);
+        }
+      });
+
+      document.getElementById('cancelarEditarSala').addEventListener('click', () => {
+        document.getElementById('modalEditarSala').style.display = 'none';
+        document.getElementById('formEditarSala').reset();
+      });
+
+      document.getElementById('formEditarSala').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const index = document.getElementById('confirmarEditarSala').getAttribute('data-index');
+        salas[index].capacidade = document.getElementById('editarCapacidade').value;
+        salas[index].equipamentos = document.getElementById('editarEquipamentos').value;
+        salas[index].descricao = document.getElementById('editarDescricao').value;
+        localStorage.setItem('salas', JSON.stringify(salas));
+        document.getElementById('modalEditarSala').style.display = 'none';
+        document.getElementById('formEditarSala').reset();
+        // Opcional: recarregar a lista de salas para refletir as mudanças
+        location.reload();
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recuperar Senha</title>
+    <link rel="icon" href="images/logo - Copia.png" type="image/png">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../agendamento-salas/lib/bootstrap/css/bootstrap.min.css">
+</head>
+
+<body class="login">
+    <div class="row" style="width: 100%;">
+        <div class="col-md-6">
+            <img src="../agendamento-salas/images/calendar.png" alt="Foto da tela inicial">
+        </div>
+        <div class="col-md-4">
+            <div class="container container-index">
+                <h2 style="text-align: center; color: #004aad; font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; font-weight: bold;">RECUPERAR SENHA</h2>
+                <p style="color: #004aad; font-weight: bold;">Informe seu e-mail cadastrado no Espaço Conect para enviarmos as instruções de redefinição de senha.
+                </p>
+                <form id="form-recuperar-senha" style="color: #004aad; font-weight: bold;">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" required>
+                    <span id="email-error" style="color: red;"></span>
+                    <br>
+                    <br><button type="submit">Enviar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const formRecuperarSenha = document.getElementById('form-recuperar-senha');
+
+        formRecuperarSenha.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const emailError = document.getElementById('email-error');
+
+            if (email) {
+                // Armazenar o email para uso posterior
+                localStorage.setItem('resetEmail', email);
+                window.location.href = 'email-enviado.html';
+            } else {
+                emailError.textContent = 'Por favor, insira um e-mail válido.';
+                setTimeout(() => {
+                    emailError.textContent = '';
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+
+</html>

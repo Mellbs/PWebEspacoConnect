@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastro</title>
+    <link rel="icon" href="images/logo - Copia.png" type="image/png">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="../agendamento-salas/lib/bootstrap/css/bootstrap.min.css">
+</head>
+
+<body class="login">
+    <div class="row" style="width: 100%;">
+        <div class="col-md-6 d-flex justify-content-center align-items-center">
+            <img src="../agendamento-salas/images/calendar.png" alt="Foto da tela inicial"
+                style="height: 600px; width: 80%; object-fit: cover; margin-top: -0px;">
+        </div>
+        <div class="col-md-4">
+            <div class="container container-index" style="height: 600px; overflow-y: auto; padding: 20px;">
+                <h2 style="font-size: 24px; text-align: center; text-align: center; color: #004aad; font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif; font-weight: bold;">CADASTRAR NOVA SENHA!</h2>
+                <form id="form-nova-senha">
+                    <input type="hidden" id="email">
+                    <label for="senha" style="color: #004aad; font-weight: bold;">Senha</label>
+                    <input type="password" id="senha" required>
+
+                    <label for="confirma" style="color: #004aad; font-weight: bold;">Confirmar senha</label>
+                    <input type="password" id="confirma" required>
+                    <br>
+                    <button type="submit" style="font-weight: bold;">Definir nova senha</button>
+                </form>
+                <div id="mensagem"></div>
+                <div id="botao-voltar" style="display: none;">
+                    <a href="index.html" ><button style="font-weight: bold;">Voltar à tela inicial</button></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const formNovaSenha = document.getElementById('form-nova-senha');
+        const senhaInput = document.getElementById('senha');
+        const confirmaInput = document.getElementById('confirma');
+        const mensagemDiv = document.getElementById('mensagem');
+        const botaoVoltar = document.getElementById('botao-voltar');
+        const emailInput = document.getElementById('email');
+
+        // Obter o email da URL ou localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email') || localStorage.getItem('resetEmail');
+        if (email) {
+            emailInput.value = email;
+        }
+
+        formNovaSenha.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const senha = senhaInput.value;
+            const confirma = confirmaInput.value;
+            const email = emailInput.value;
+
+            if (senha !== confirma) {
+                mensagemDiv.innerText = 'As senhas não coincidem';
+                mensagemDiv.style.color = 'red';
+                return;
+            }
+
+            if (!email) {
+                mensagemDiv.innerText = 'E-mail não encontrado. Tente novamente.';
+                mensagemDiv.style.color = 'red';
+                return;
+            }
+
+            try {
+                const response = await fetch('/2ids/v100_EspacoConnect/api/auth/reset_password.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        email: email,
+                        nova_senha: senha
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    mensagemDiv.innerText = 'Senha alterada com sucesso!';
+                    mensagemDiv.style.color = 'green';
+                    botaoVoltar.style.display = 'block';
+                    localStorage.removeItem('resetEmail');
+                } else {
+                    mensagemDiv.innerText = result.mensagem;
+                    mensagemDiv.style.color = 'red';
+                }
+            } catch (error) {
+                mensagemDiv.innerText = 'Erro ao alterar senha. Tente novamente.';
+                mensagemDiv.style.color = 'red';
+                console.error('Erro:', error);
+            }
+        });
+    </script>
+</body>
+
+</html>

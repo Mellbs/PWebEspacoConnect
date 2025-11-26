@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerenciamento de Salas</title>
+  <link rel="icon" href="../images/logo - Copia.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="body">
+    <img src="../images/cabeçalho.png" alt="Cabeçalho" width="1536px" height="45px">
+  <header>
+    <div class="user-info">
+      <img src="../images/perfilSemFoto.png" alt="Foto de Perfil" id="profilePic" class="profile-pic">
+      <div class="user-details">
+        <p id="username"></p>
+        <p id="userEmail"></p>
+      </div>
+    </div>
+    <nav>
+      <a href="tela-inicial_admin.html" style="text-decoration: none;">Início</a>
+            <a href="salas_admin.html" style="text-decoration: none;">Salas Disponíveis <span id="salasDisponiveisCount"></span></a>
+            <a href="salas-reservadas_admin.html" style="text-decoration: none;">Salas Reservadas</a>
+            <a href="gerenciamento_admin.html" style="text-decoration: none;">Gerenciamento</a>
+            <a href="../index.html" style="text-decoration: none;">Sair</a>
+    </nav>
+  </header>
+  <div id="modalSair" class="modal-sair">
+    <div class="modal-conteudo">
+      <p>Deseja realmente sair?</p>
+      <div class="botoes-modal">
+        <button id="confirmarSair">Sim</button>
+        <button id="cancelarSair">Não</button>
+      </div>
+    </div>
+  </div>
+  <div id="modalCriarSala" class="modal-criar-sala">
+    <div class="modal-conteudo" style="margin-top: 30px;"">
+      <h2>Criar Sala</h2>
+      <form id="formCriarSala">
+        <label for="nomeSala">Nome da Sala:</label>
+        <input type="text" id="nomeSala" name="nomeSala"><br><br>
+        <div class="botoes-modal">
+          <button id="confirmarCriarSala">Criar</button>
+          <button id="cancelarCriarSala" type="button">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div id="modalEditarSala" class="modal-criar-sala">
+    <div class="modal-conteudo" style="margin-top: 30px;">
+      <h2>Editar Sala: <span id="editarSalaNome"></span></h2>
+      <form id="formEditarSala">
+        <label for="editarCapacidade">Capacidade:</label>
+        <input type="number" id="editarCapacidade" name="capacidade" required><br><br>
+        <label for="editarDescricao">Descrição:</label>
+        <textarea id="editarDescricao" name="descricao" rows="3"></textarea><br><br>
+        <div class="botoes-modal">
+          <button id="confirmarEditarSala">Salvar Alterações</button>
+          <button id="cancelarEditarSala" class="btn-cancelar" type="button">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div id="modalExcluirSala" class="modal-sair">
+    <div class="modal-conteudo">
+      <p>Deseja realmente excluir a sala <span id="excluirSalaNome"></span>?</p>
+      <div class="botoes-modal">
+        <button id="confirmarExcluirSala">Sim</button>
+        <button id="cancelarExcluirSala">Não</button>
+      </div>
+    </div>
+  </div>
+  <div class="titulo" style="display: flex; align-items: center; justify-content: space-between;">
+    <h1>Gerenciamento de Salas</h1>
+    <div style="display: flex; gap: 15px;">
+      <button id="btnCriarSala" style="width: 180px; height: 35px; margin-top: 148px; background-color: #004aad; color: #fff; padding: 10px; border: none; 
+        border-radius: 5px; cursor: pointer; font-size: 17px; font-weight: bold; ">
+        Criar Sala
+      </button>
+      <button id="btnGerenciarUsuario"
+        style="width: 180px; height: 35px; background-color: #004aad; color: #fff; padding: 10px; border: none; 
+        border-radius: 5px; cursor: pointer; font-size: 17px; font-weight: bold; margin-right: 85px; margin-top: -1px;">
+        Gerenciar Usuários
+      </button>
+    </div>
+  </div>
+  <main>
+    <div class="salas" id="listaSalas"></div>
+  </main>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const usuario = JSON.parse(localStorage.getItem('usuario'));
+      if (!usuario || !usuario.email.endsWith('@gerente.com')) {
+        alert('Acesso negado. Apenas contas terminadas em @gerente.com podem acessar esta página.');
+        window.location.href = '../index.html';
+        return;
+      }
+      document.getElementById("username").textContent = usuario.username;
+      document.getElementById("userEmail").textContent = usuario.email;
+      if (usuario.profilePic) {
+        document.getElementById("profilePic").src = usuario.profilePic;
+      }
+      document.getElementById('profilePic').addEventListener('click', () => {
+        if (!usuario) return alert('Faça login para mudar a foto.');
+        const uploadInput = document.createElement('input');
+        uploadInput.type = 'file';
+        uploadInput.accept = 'image/*';
+        uploadInput.click();
+        uploadInput.addEventListener('change', () => {
+          const file = uploadInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            document.getElementById('profilePic').src = reader.result;
+            usuario.profilePic = reader.result;
+            localStorage.setItem('usuario', JSON.stringify(usuario));
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+      const listaSalas = document.getElementById("listaSalas");
+      let salas = [];
+
+      async function carregarSalas() {
+        try {
+          const response = await fetch('/2ids/v100_EspacoConnect/api/admin/salas_listar.php');
+          const data = await response.json();
+          if (data.status === 'success') {
+            salas = data.salas;
+            localStorage.setItem("salas", JSON.stringify(salas));
+            renderizarSalas();
+          } else {
+            console.error('Erro ao carregar salas:', data.mensagem);
+          }
+        } catch (error) {
+          console.error('Erro na requisição:', error);
+        }
+      }
+
+      function renderizarSalas() {
+        listaSalas.innerHTML = '';
+        salas.forEach((sala, index) => {
+          const salaDiv = document.createElement("div");
+          salaDiv.className = "sala";
+          salaDiv.innerHTML = `
+            ${sala.nome} <br>
+            <button class="editarSalaBtn" data-index="${index}" style="background-color: white; color: black; padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; cursor: pointer;">Editar</button>
+            <button class="excluirSalaBtn btn-excluir" data-index="${index}">🗑️ Excluir</button>
+          `;
+          const editButton = salaDiv.querySelector('.editarSalaBtn');
+          editButton.addEventListener('click', () => {
+            const idx = editButton.getAttribute('data-index');
+            const room = salas[idx];
+            document.getElementById('editarSalaNome').textContent = room.nome;
+            document.getElementById('editarCapacidade').value = room.capacidade || '';
+            document.getElementById('editarDescricao').value = room.descricao_sala || '';
+            document.getElementById('modalEditarSala').style.display = 'block';
+            document.getElementById('confirmarEditarSala').setAttribute('data-index', idx);
+          });
+
+          const deleteButton = salaDiv.querySelector('.excluirSalaBtn');
+          deleteButton.addEventListener('click', () => {
+            const idx = deleteButton.getAttribute('data-index');
+            const room = salas[idx];
+            document.getElementById('excluirSalaNome').textContent = room.nome;
+            document.getElementById('modalExcluirSala').style.display = 'block';
+            document.getElementById('confirmarExcluirSala').setAttribute('data-index', idx);
+          });
+          listaSalas.appendChild(salaDiv);
+        });
+      }
+
+      // Carregar salas ao iniciar
+      carregarSalas();
+      // Modal Criar Sala
+      document.getElementById("btnCriarSala").addEventListener("click", () => {
+        document.getElementById("modalCriarSala").style.display = "block";
+      });
+      document.getElementById("cancelarCriarSala").addEventListener("click", () => {
+        document.getElementById("modalCriarSala").style.display = "none";
+        document.getElementById("formCriarSala").reset();
+      });
+      document.getElementById("formCriarSala").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const nomeSala = document.getElementById("nomeSala").value;
+        if (nomeSala) {
+          try {
+            const response = await fetch('/2ids/v100_EspacoConnect/api/admin/salas_criar.php', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: new URLSearchParams({
+                nome: nomeSala
+              })
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+              alert('Sala criada com sucesso!');
+              carregarSalas(); // Reload the list from the database
+              document.getElementById("modalCriarSala").style.display = "none";
+              document.getElementById("formCriarSala").reset();
+            } else {
+              alert(result.mensagem);
+            }
+          } catch (error) {
+            alert('Erro ao criar sala. Tente novamente.');
+            console.error('Erro:', error);
+          }
+        }
+      });
+      // Botão Gerenciar Usuários
+      document.getElementById("btnGerenciarUsuario").addEventListener("click", () => {
+        window.location.href = "gerenciar-usuarios.php";
+      });
+      // Modal de Sair
+      const sairLink = document.querySelector('a[href="index.html"]');
+      const modalSair = document.getElementById('modalSair');
+      sairLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        modalSair.style.display = 'block';
+      });
+      document.getElementById('confirmarSair').addEventListener('click', function () {
+        window.location.href = 'index.html';
+      });
+      document.getElementById('cancelarSair').addEventListener('click', function () {
+        modalSair.style.display = 'none';
+      });
+      window.addEventListener('click', function (event) {
+        if (event.target === modalSair) {
+          modalSair.style.display = 'none';
+        }
+        if (event.target === document.getElementById('modalCriarSala')) {
+          document.getElementById('modalCriarSala').style.display = 'none';
+          document.getElementById('formCriarSala').reset();
+        }
+        if (event.target === document.getElementById('modalEditarSala')) {
+          document.getElementById('modalEditarSala').style.display = 'none';
+          document.getElementById('formEditarSala').reset();
+        }
+        if (event.target === document.getElementById('modalExcluirSala')) {
+          document.getElementById('modalExcluirSala').style.display = 'none';
+        }
+      });
+
+      // Modal Editar Sala
+      document.addEventListener('click', function (event) {
+        if (event.target.classList.contains('editarSalaBtn')) {
+          const index = event.target.getAttribute('data-index');
+          const sala = salas[index];
+          document.getElementById('editarSalaNome').textContent = sala.nome;
+          document.getElementById('editarCapacidade').value = sala.capacidade || '';
+          document.getElementById('editarEquipamentos').value = sala.equipamentos || '';
+          document.getElementById('editarDescricao').value = sala.descricao_sala || '';
+          document.getElementById('modalEditarSala').style.display = 'block';
+          document.getElementById('confirmarEditarSala').setAttribute('data-index', index);
+        }
+      });
+
+      document.getElementById('cancelarEditarSala').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('modalEditarSala').style.display = 'none';
+        document.getElementById('formEditarSala').reset();
+      });
+
+      document.getElementById('formEditarSala').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const index = document.getElementById('confirmarEditarSala').getAttribute('data-index');
+        const sala = salas[index];
+        if (!sala || !sala.id_sala) {
+          alert('Sala não encontrada ou ID inválido.');
+          return;
+        }
+        const capacidade = document.getElementById('editarCapacidade').value;
+        const descricao = document.getElementById('editarDescricao').value;
+
+        try {
+          const response = await fetch('/2ids/v100_EspacoConnect/api/admin/salas_editar.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              id_sala: sala.id_sala,
+              capacidade: capacidade,
+              descricao: descricao
+            })
+          });
+          const result = await response.json();
+          if (result.status === 'success') {
+            alert('Sala atualizada com sucesso!');
+            carregarSalas(); // Recarregar a lista de salas
+            document.getElementById('modalEditarSala').style.display = 'none';
+            document.getElementById('formEditarSala').reset();
+          } else {
+            alert(result.mensagem);
+          }
+        } catch (error) {
+          alert('Erro ao atualizar sala. Tente novamente.');
+          console.error('Erro:', error);
+        }
+      });
+
+      // Modal Excluir Sala
+      document.getElementById('cancelarExcluirSala').addEventListener('click', () => {
+        document.getElementById('modalExcluirSala').style.display = 'none';
+      });
+
+      document.getElementById('confirmarExcluirSala').addEventListener('click', async () => {
+        const index = parseInt(document.getElementById('confirmarExcluirSala').getAttribute('data-index'));
+        const sala = salas[index];
+        if (!sala || !sala.id_sala) {
+          alert('Sala não encontrada ou ID inválido.');
+          document.getElementById('modalExcluirSala').style.display = 'none';
+          return;
+        }
+
+        const usuario = JSON.parse(localStorage.getItem('usuario'));
+        if (!usuario || !usuario.email) {
+          alert('Usuário não logado.');
+          document.getElementById('modalExcluirSala').style.display = 'none';
+          return;
+        }
+
+        try {
+          const response = await fetch('/2ids/v100_EspacoConnect/api/admin/salas_excluir.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              id_sala: sala.id_sala,
+              email: usuario.email
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.status === 'success') {
+            alert('Sala excluída com sucesso!');
+            carregarSalas(); // Reload the list from the database
+            document.getElementById('modalExcluirSala').style.display = 'none';
+          } else {
+            alert(result.message);
+          }
+        } catch (error) {
+          alert('Erro ao excluir sala. Tente novamente.');
+          console.error('Erro:', error);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

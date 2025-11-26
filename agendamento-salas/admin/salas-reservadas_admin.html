@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Salas Reservadas</title>
+  <link rel="icon" href="../images/logo - Copia.png" type="image/png">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="body">
+  <img src="../images/cabeçalho.png" alt="Foto de Perfil" width="1536px" height="45px">
+  <header>
+    <div class="user-info">
+      <img src="../images/perfilSemFoto.png" alt="Foto de Perfil" id="profilePic" class="profile-pic">
+      <div class="user-details">
+        <p id="username">Nome de Usuário</p>
+        <p id="userEmail">email@gmail.com</p>
+      </div>
+    </div>
+    <nav>
+      <a href="tela-inicial_admin.html" style="text-decoration: none;">Início</a>
+            <a href="salas_admin.html" style="text-decoration: none;">Salas Disponíveis <span id="salasDisponiveisCount"></span></a>
+            <a href="salas-reservadas_admin.html" style="text-decoration: none;">Salas Reservadas</a>
+            <a href="gerenciamento_admin.html" style="text-decoration: none;">Gerenciamento</a>
+            <a href="../index.html" style="text-decoration: none;">Sair</a>
+        <span
+          id="salasReservadasCount"></span></a>
+    </nav>
+  </header>
+
+  <!-- Modal de confirmação de saída -->
+  <div id="modalSair" class="modal-sair">
+    <div class="modal-conteudo">
+      <p>Deseja realmente sair?</p>
+      <div class="botoes-modal">
+        <button id="confirmarSair">Sim</button>
+        <button id="cancelarSair">Não</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="titulo">
+    <h1>Salas Reservadas</h1>
+  </div>
+
+  <main>
+    <div class="salas-reservadas"></div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const currentUser = JSON.parse(localStorage.getItem('usuario'));
+
+      if (currentUser) {
+        document.getElementById('username').textContent = currentUser.username;
+        document.getElementById('userEmail').textContent = currentUser.email;
+        if (currentUser.profilePic) {
+          document.getElementById('profilePic').src = currentUser.profilePic;
+        }
+
+        if (currentUser.role === 'gerente') {
+          document.querySelector('a[href="gerenciamento_admin.html"]').style.display = 'inline-block';
+        } else {
+          document.querySelector('a[href="gerenciamento_admin.html"]').style.display = 'none';
+        }
+      }
+
+      const salasReservadasCount = document.getElementById('salasReservadasCount');
+      const atualizarSalasReservadasCount = () => {
+        const reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+        salasReservadasCount.innerHTML = `<span style="background-color: white; border-radius: 50%; padding: 0; font-size: 14px; display: inline-block; text-align: center; width: 25px; height: 25px; box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); line-height: 25px;"><span style="color: #004aad; font-weight: bold;">${reservas.length}</span></span>`;
+      };
+      atualizarSalasReservadasCount();
+
+      const salasDisponiveisCount = document.getElementById('salasDisponiveisCount');
+      const atualizarSalasDisponiveisCount = () => {
+        const salas = JSON.parse(localStorage.getItem("salas")) || [];
+        const reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+        const salasReservadas = reservas.map(reserva => reserva.salaId);
+        const salasDisponiveis = salas.filter(sala => !salasReservadas.includes(sala.nome) && sala.reservavel);
+        salasDisponiveisCount.innerHTML = `<span style="background-color: white; border-radius: 50%; padding: 0; font-size: 14px; display: inline-block; text-align: center; width: 25px; height: 25px; box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); line-height: 25px;"><span style="color: #004aad; font-weight: bold;">${salasDisponiveis.length}</span></span>`;
+      };
+      atualizarSalasDisponiveisCount();
+
+      document.getElementById('profilePic').addEventListener('click', () => {
+        if (!currentUser) return alert('Faça login para mudar a foto.');
+        const uploadInput = document.createElement('input');
+        uploadInput.type = 'file';
+        uploadInput.accept = 'image/*';
+        uploadInput.click();
+        uploadInput.addEventListener('change', () => {
+          const file = uploadInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            document.getElementById('profilePic').src = reader.result;
+            currentUser.profilePic = reader.result;
+            localStorage.setItem('usuario', JSON.stringify(currentUser));
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+      const container = document.querySelector('.salas-reservadas');
+      container.innerHTML = '';
+
+      reservas.forEach((reserva) => {
+        const sala = document.createElement('div');
+        sala.classList.add('sala-reservada');
+
+        sala.innerHTML = `
+          ${reserva.salaId}
+          <br><button class="ver-detalhes">Ver detalhes</button>
+          <div class="detalhes" style="display: none;">
+            Nome: ${reserva.nome}<br>
+            Horário: ${reserva.horario}<br>
+            Materiais: ${reserva.materiais}
+          </div>
+          <br><a href="#" class="cancelar-reserva">Cancelar reserva</a>
+        `;
+
+        container.appendChild(sala);
+
+        sala.querySelector('.ver-detalhes').addEventListener('click', () => {
+          const detalhes = sala.querySelector('.detalhes');
+          detalhes.style.display = detalhes.style.display === 'none' ? 'block' : 'none';
+        });
+
+        sala.querySelector('.cancelar-reserva').addEventListener('click', (e) => {
+          e.preventDefault();
+          cancelarReserva(reserva.salaId, sala);
+        });
+      });
+
+      function cancelarReserva(salaId, sala) {
+        const reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+        const index = reservas.findIndex((reserva) => reserva.salaId === salaId);
+        if (index !== -1) {
+          reservas.splice(index, 1);
+          localStorage.setItem('reservas', JSON.stringify(reservas));
+        }
+        sala.remove();
+        atualizarSalasReservadasCount();
+        atualizarSalasDisponiveisCount();
+      }
+
+      const sairLink = document.querySelector('a[href="index.html"]');
+      const modal = document.getElementById('modalSair');
+      const confirmarBtn = document.getElementById('confirmarSair');
+      const cancelarBtn = document.getElementById('cancelarSair');
+
+      sairLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        modal.style.display = 'block';
+      });
+
+      confirmarBtn.addEventListener('click', function () {
+        window.location.href = 'index.html';
+      });
+
+      cancelarBtn.addEventListener('click', function () {
+        modal.style.display = 'none';
+      });
+
+      window.addEventListener('click', function (event) {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+      // ---- DESTACAR SALA PESQUISADA ----
+      const urlParams = new URLSearchParams(window.location.search);
+      const salaId = urlParams.get("salaId");
+
+      if (salaId) {
+        const listaReservas = document.querySelectorAll(".reserva-item"); // ajuste a classe conforme seu HTML
+        listaReservas.forEach(reserva => {
+          const nomeSala = reserva.querySelector(".reserva-nome").innerText.trim(); // ajuste seletor
+          if (nomeSala === salaId) {
+            reserva.classList.add("sala-destaque");
+            reserva.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        });
+      }
+
+
+    });
+  </script>
+</body>
+
+</html>

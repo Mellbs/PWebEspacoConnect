@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Página Inicial</title>
+    <link rel="icon" href="images/logo - Copia.png" type="image/png">
+    <link rel="stylesheet" href="../css/style.css">
+
+</head>
+
+<body class="body-inicio">
+    <video autoplay muted loop id="bgVideo">
+        <source
+            src="videos/1h Blue Mood Lights _ Radial gradient colors _ Screensaver _ LED Light _ Purple _ Background.mp4"
+            type="video/mp4">
+    </video>
+
+    <img src="../images/cabeçalho.png" alt="Cabeçalho" width="1536px" height="45px">
+    <header>
+        <div class="user-info">
+
+            <div class="menu-container">
+                <span class="menu-dots">⋮</span>
+                <div class="menu-options">
+                    <div id="editarPerfil">Editar Perfil</div>
+                </div>
+            </div>
+
+            <img src="../images/perfilSemFoto.png" alt="Foto de Perfil" id="profilePic" class="profile-pic">
+            <div class="user-details">
+                <p id="username">Usuário</p>
+                <p id="userEmail">email@gmail.com</p>
+            </div>
+        </div>
+        <div style="position: relative;">
+            <input type="text" placeholder="Pesquisar sala..." id="busca" autocomplete="off">
+            <div id="resultados-busca"></div>
+        </div>
+        <nav>
+        <a href="tela-inicial_admin.html" style="text-decoration: none;">Início</a>
+            <a href="salas_admin.html" style="text-decoration: none;">Salas Disponíveis <span id="salasDisponiveisCount"></span></a>
+            <a href="salas-reservadas_admin.html" style="text-decoration: none;">Salas Reservadas</a>
+            <a href="gerenciamento_admin.html" style="text-decoration: none;">Gerenciamento</a>
+            <a href="../index.html" style="text-decoration: none;">Sair</a>
+        </nav>
+    </header>
+
+    <div id="modalPerfil" class="modal">
+        <div class="modal-content">
+            <h2>Editar Perfil</h2>
+            <input type="text" id="novoUsername" placeholder="Novo nome de usuário">
+            <input type="text" id="novoEmailNome" placeholder="Parte antes do @">
+            <br>
+            <button id="salvarPerfil">Salvar</button>
+            <button id="cancelarPerfil">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação de saída -->
+    <div id="modalSair" class="modal-sair">
+        <div class="modal-conteudo">
+            <p>Deseja realmente sair?</p>
+            <div class="botoes-modal">
+                <button id="confirmarSair">Sim</button>
+                <button id="cancelarSair">Não</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="container-inicio">
+        <div class="Bem-vindo1">
+            <h1>Bem-vindo ao</h1>
+        </div>
+        <div class="Bem-vindo">
+            <h1>Sistema de Reserva de Salas,</h1>
+        </div>
+        <div class="Bem-vindo">
+            <h1>Espaço Connect!</h1>
+        </div>
+        <div class="informacoes-inicio">
+            <h3>Utilize o menu acima para navegar pelas opções do sistema.</h3>
+            <h3>Você pode reservar salas, visualizar reservas existentes ou gerenciar as salas (caso tenha permissão).
+            </h3>
+        </div>
+    </main>
+
+    <footer class="footer" style="background-color: #004aad; color: white; padding: 5px; text-align: center;">
+        <div
+            style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; max-width: 800px; margin: 0 auto;">
+            <div>
+                <p style="font-size: 14px; font-weight: bold;">Sistema de Reserva de Salas - Espaço Connect</p>
+            </div>
+            <div>
+                <p style="font-size: 14px; font-weight: bold;">Suporte: suporte@espacoconnect.com</p>
+                <p style="font-size: 14px; font-weight: bold;">(11) 96933-1586</p>
+            </div>
+        </div>
+        <p style="font-size: 12px; margin-top: 10px; margin-bottom: 7px;">&copy; 2023 Sistema de Reserva de Salas -
+            Espaço Connect. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            let usuario = JSON.parse(localStorage.getItem('usuario'));
+            if (!usuario) window.location.href = 'index.html';
+
+            if (usuario) {
+                document.getElementById('username').innerText = usuario.username;
+                document.getElementById('userEmail').innerText = usuario.email;
+                if (usuario.profilePic) document.getElementById('profilePic').src = usuario.profilePic;
+
+                const linkGerenciamento = document.getElementById('linkGerenciamento');
+                linkGerenciamento.style.display = (usuario.role === 'gerente') ? 'inline-block' : 'none';
+            }
+
+            // -------- BARRA DE PESQUISA --------
+            const buscaInput = document.getElementById('busca');
+            const resultadosBusca = document.getElementById('resultados-busca');
+
+            buscaInput.addEventListener('input', () => {
+                const busca = buscaInput.value.toLowerCase().trim();
+                const reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+                const salas = JSON.parse(localStorage.getItem('salas')) || [];
+
+                const nomesUnicos = new Map();
+
+                salas.forEach(sala => {
+                    if (sala.nome.toLowerCase().includes(busca)) {
+                        nomesUnicos.set(sala.nome, { nome: sala.nome, tipo: "sala" });
+                    }
+                });
+
+                reservas.forEach(reserva => {
+                    if (reserva.salaId.toLowerCase().includes(busca)) {
+                        nomesUnicos.set(reserva.salaId, { nome: reserva.salaId, tipo: "reserva" });
+                    }
+                });
+
+                resultadosBusca.innerHTML = '';
+
+                if (busca === '') {
+                    resultadosBusca.classList.remove('show');
+                    return;
+                }
+
+                if (nomesUnicos.size > 0) {
+                    resultadosBusca.classList.add('show');
+                    nomesUnicos.forEach(item => {
+                        const resultadoDiv = document.createElement('div');
+                        resultadoDiv.innerHTML = item.nome.replace(new RegExp(busca, 'gi'), match => `<span>${match}</span>`);
+                        resultadoDiv.addEventListener('click', () => {
+                            if (item.tipo === "sala") {
+                                window.location.href = `salas.html?salaId=${encodeURIComponent(item.nome)}`;
+                            } else {
+                                window.location.href = `salas-reservadas.html?salaId=${encodeURIComponent(item.nome)}`;
+                            }
+                        });
+                        resultadosBusca.appendChild(resultadoDiv);
+                    });
+                } else {
+                    resultadosBusca.classList.add('show');
+                    const resultadoDiv = document.createElement('div');
+                    resultadoDiv.style.color = "red";
+                    resultadoDiv.style.fontWeight = "bold";
+                    resultadoDiv.innerText = "Sala inexistente ou não encontrada";
+                    resultadosBusca.appendChild(resultadoDiv);
+                }
+            });
+
+            document.addEventListener('click', (event) => {
+                if (event.target !== buscaInput && !resultadosBusca.contains(event.target)) {
+                    resultadosBusca.classList.remove('show');
+                }
+            });
+
+            // -------- MODAL DE SAÍDA --------
+            const sairLink = document.querySelector('a[href="index.html"]');
+            const modal = document.getElementById('modalSair');
+            const confirmarBtn = document.getElementById('confirmarSair');
+            const cancelarBtn = document.getElementById('cancelarSair');
+
+            if (sairLink) {
+                sairLink.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    modal.style.display = 'block';
+                });
+            }
+
+            confirmarBtn.addEventListener('click', function () {
+                localStorage.removeItem('usuario');
+                window.location.href = 'index.html';
+            });
+
+            cancelarBtn.addEventListener('click', function () {
+                modal.style.display = 'none';
+            });
+
+            window.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // -------- TROCAR FOTO DE PERFIL --------
+            document.getElementById('profilePic').addEventListener('click', () => {
+                if (!usuario) return alert('Faça login para mudar a foto.');
+
+                const uploadInput = document.createElement('input');
+                uploadInput.type = 'file';
+                uploadInput.accept = 'image/*';
+                uploadInput.click();
+
+                uploadInput.addEventListener('change', () => {
+                    const file = uploadInput.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        document.getElementById('profilePic').src = reader.result;
+                        usuario.profilePic = reader.result;
+                        localStorage.setItem('usuario', JSON.stringify(usuario));
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            // -------- MENU DE 3 PONTINHOS + EDITAR PERFIL --------
+            const menuDots = document.querySelector('.menu-dots');
+            const menuOptions = document.querySelector('.menu-options');
+            const editarPerfilBtn = document.getElementById('editarPerfil');
+
+            const modalPerfil = document.getElementById('modalPerfil');
+            const salvarPerfil = document.getElementById('salvarPerfil');
+            const cancelarPerfil = document.getElementById('cancelarPerfil');
+
+            menuDots.addEventListener('click', () => {
+                menuOptions.style.display = menuOptions.style.display === 'block' ? 'none' : 'block';
+            });
+
+            // Fecha o menu se clicar fora
+            document.addEventListener('click', (e) => {
+                if (!menuDots.contains(e.target) && !menuOptions.contains(e.target)) {
+                    menuOptions.style.display = 'none';
+                }
+            });
+
+            // Abrir modal de editar perfil
+            editarPerfilBtn.addEventListener('click', () => {
+                menuOptions.style.display = 'none';
+                const usuario = JSON.parse(localStorage.getItem('usuario'));
+                if (!usuario) return;
+
+                document.getElementById('novoUsername').value = usuario.username;
+                document.getElementById('novoEmailNome').value = usuario.email.split('@')[0];
+                modalPerfil.style.display = 'block';
+            });
+
+            // Cancelar modal
+            cancelarPerfil.addEventListener('click', () => {
+                modalPerfil.style.display = 'none';
+            });
+
+            // Salvar alterações
+            salvarPerfil.addEventListener('click', () => {
+                let usuario = JSON.parse(localStorage.getItem('usuario'));
+                if (!usuario) return;
+
+                const novoUsername = document.getElementById('novoUsername').value.trim();
+                const novoEmailNome = document.getElementById('novoEmailNome').value.trim();
+                const dominio = usuario.email.split('@')[1];
+
+                if (novoUsername) usuario.username = novoUsername;
+                if (novoEmailNome) usuario.email = `${novoEmailNome}@${dominio}`;
+
+                localStorage.setItem('usuario', JSON.stringify(usuario));
+
+                // Atualiza na tela
+                document.getElementById('username').innerText = usuario.username;
+                document.getElementById('userEmail').innerText = usuario.email;
+
+                modalPerfil.style.display = 'none';
+            });
+
+
+        });
+    </script>
+
+
+</body>
+
+</html>
